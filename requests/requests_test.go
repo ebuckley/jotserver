@@ -33,6 +33,10 @@ func TestNewAuth(t *testing.T) {
 }
 
 func TestAuthHandler(t *testing.T) {
+	db := mockdb()
+	defer db.Close()
+	registerUser(db, t)
+
 	requestBody := strings.NewReader(goodAuthRequest)
 	req, err := http.NewRequest("POST", "http://localhost.com/authenticate", requestBody)
 	if err != nil {
@@ -40,7 +44,7 @@ func TestAuthHandler(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	AuthHandler(w, req)
+	AuthHandler(db)(w, req)
 
 	if w.Code != 200 {
 		t.Errorf("response not successfull")
@@ -61,6 +65,10 @@ func TestAuthHandler(t *testing.T) {
 }
 
 func TestAuthAndRestrictedVisit(t *testing.T) {
+	db := mockdb()
+	defer db.Close()
+	registerUser(db, t)
+
 	requestBody := strings.NewReader(goodAuthRequest)
 	req, err := http.NewRequest("POST", "http://localhost.com/authenticate", requestBody)
 	if err != nil {
@@ -68,7 +76,7 @@ func TestAuthAndRestrictedVisit(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	AuthHandler(w, req)
+	AuthHandler(db)(w, req)
 	if w.Code != 200 {
 		t.Errorf("response not successfull")
 	}
@@ -115,9 +123,12 @@ func mockdb() *sql.DB {
 	return conn
 }
 func TestRegisterUser(t *testing.T) {
-
 	db := mockdb()
 	defer db.Close()
+	registerUser(db, t)
+}
+
+func registerUser(db *sql.DB, t *testing.T) {
 
 	requestBody := strings.NewReader(goodAuthRequest)
 	req, err := http.NewRequest("POST", "http://localhost.com/register", requestBody)

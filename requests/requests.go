@@ -62,13 +62,6 @@ func errorResponse(reason string, w http.ResponseWriter) {
 	}
 }
 
-func isValidPassword(req *AuthRequest) bool {
-	if req.User == "ersin" && req.Password == "daedbeef" {
-		return true
-	}
-	return false
-}
-
 //return false if it is options call which means we should make a direct response without body
 func allowCrossOrigin(rw http.ResponseWriter, r *http.Request) bool {
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
@@ -84,53 +77,57 @@ func allowCrossOrigin(rw http.ResponseWriter, r *http.Request) bool {
  * HTTP handlers
  */
 
-func AuthHandler(w http.ResponseWriter, r *http.Request) {
+func AuthHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 
-	if !allowCrossOrigin(w, r) {
-		log.Println("cross origin request recieved")
-		return
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if !allowCrossOrigin(w, r) {
+			log.Println("cross origin request recieved")
+			return
+		}
+
+		if r.Method != "POST" {
+			w.WriteHeader(http.StatusBadRequest)
+			reason := fmt.Sprintf("ERROR: expected a POST but recieved ", r.Method)
+			errorResponse(reason, w)
+			return
+		}
+
+		//parse request body
+		decoder := json.NewDecoder(r.Body)
+
+		authorizationMsg := new(AuthRequest)
+		err := decoder.Decode(authorizationMsg)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			reason := fmt.Sprintf("Error: request was not parsable %v", err)
+			errorResponse(reason, w)
+			return
+		}
+
+		log.Printf("Authenticate Request: user[%s]", authorizationMsg.User, authorizationMsg.Password)
+
+		newUserID := data.IsValidLogin(db, authorizationMsg.User, data.Password(authorizationMsg.Password))
+		if newUserID == -1 {
+			w.WriteHeader(http.StatusForbidden)
+			errorResponse("Username or Password is not valid", w)
+			return
+		}
+
+		var token string
+		token, err = newAuthToken(authorizationMsg.User)
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			reason := fmt.Sprintf("Error with token signing:%v", err)
+			log.Println(reason)
+			errorResponse(reason, w)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		jotTokenResponse(token, w)
 	}
-
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusBadRequest)
-		reason := fmt.Sprintf("ERROR: expected a POST but recieved ", r.Method)
-		errorResponse(reason, w)
-		return
-	}
-
-	//parse request body
-	decoder := json.NewDecoder(r.Body)
-
-	authorizationMsg := new(AuthRequest)
-	err := decoder.Decode(authorizationMsg)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		reason := fmt.Sprintf("Error: request was not parsable %v", err)
-		errorResponse(reason, w)
-		return
-	}
-
-	log.Printf("Authenticate Request: user[%s]", authorizationMsg.User, authorizationMsg.Password)
-
-	if !isValidPassword(authorizationMsg) {
-		w.WriteHeader(http.StatusForbidden)
-		errorResponse("Username or Password is not valid", w)
-		return
-	}
-
-	var token string
-	token, err = newAuthToken(authorizationMsg.User)
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		reason := fmt.Sprintf("Error with token signing:%v", err)
-		log.Println(reason)
-		errorResponse(reason, w)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	jotTokenResponse(token, w)
 }
 
 func RestrictedHandler(w http.ResponseWriter, r *http.Request) {
@@ -207,6 +204,7 @@ func RegisterHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 		if r.Method != "POST" {
 			w.WriteHeader(http.StatusBadRequest)
 			errorResponse("Expected http POST", w)
+			return
 		}
 
 		decoder := json.NewDecoder(r.Body)
@@ -217,16 +215,19 @@ func RegisterHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			msg := fmt.Sprintf("Error parsing request: %s", err)
 			errorResponse(msg, w)
+			return
 		}
 
 		if data.IsRegisteredUser(db, registration.User) != -1 {
 			w.WriteHeader(http.StatusConflict)
 			errorResponse("user already exists", w)
+			return
 		}
 
 		if !data.CreateUser(db, registration.User, data.Password(registration.Password)) {
 			w.WriteHeader(http.StatusInternalServerError)
 			errorResponse("Error: could not create user", w)
+			return
 		}
 
 		userId := data.IsValidLogin(db, registration.User, data.Password(registration.Password))
@@ -234,6 +235,7 @@ func RegisterHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Println("Error: registration was not able to login with created user", registration)
 			errorResponse("Error: with registration, try again", w)
+			return
 		}
 
 		var newTkn string
@@ -242,6 +244,7 @@ func RegisterHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Println("Error creating auth token", err)
 			errorResponse("Error creating token", w)
+			return
 		}
 		w.WriteHeader(http.StatusCreated)
 		jotTokenResponse(newTkn, w)

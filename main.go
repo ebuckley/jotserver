@@ -41,7 +41,7 @@ func main() {
 	db := getDB(*dbFileName)
 
 	log.Printf("starting jotserver on %s", *connString)
-	http.HandleFunc("/authenticate", r.AuthHandler)
+	http.HandleFunc("/authenticate", r.AuthHandler(db))
 	http.HandleFunc("/restricted", r.RestrictedHandler)
 	http.HandleFunc("/register", r.RegisterHandler(db))
 
