@@ -45,7 +45,6 @@ func main() {
 	http.HandleFunc("/restricted", r.RestrictedHandler)
 	http.HandleFunc("/register", r.RegisterHandler(db))
 
-	//TODO catch errors and log them
 	go func() {
 		sig := <-sigs
 		log.Println("recieved signal", sig)
@@ -55,6 +54,7 @@ func main() {
 	go func() {
 		http.ListenAndServe(*connString, nil)
 	}()
+
 	<-done
 	db.Close()
 	log.Println("exiting")
