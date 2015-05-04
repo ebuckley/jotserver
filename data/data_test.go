@@ -60,4 +60,8 @@ func TestUserWorkflow(t *testing.T) {
 	if IsValidLogin(db, name, Password("ahuuehueh")) != -1 {
 		t.Errorf("Login should not be valid for %v %v", name, "ahuehhueuhe")
 	}
+
+	if leval == -1 {
+		t.Errorf("Login should be valid for %v %v", name, rawPw)
+	}
 }

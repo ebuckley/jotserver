@@ -17,6 +17,7 @@ create table users (
 );
 delete from users;
 `
+
 var createUserQuery = `
 insert into users(name, password) values (?, ?)
 `
@@ -24,6 +25,7 @@ insert into users(name, password) values (?, ?)
 var findUserQuery = `
 select id from users where name = ? and password = ?
 `
+
 var findUsersQuery = `
 select id from users where name = ?
 `

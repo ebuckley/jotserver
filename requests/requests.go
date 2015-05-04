@@ -182,7 +182,7 @@ func RestrictedHandler(w http.ResponseWriter, r *http.Request) {
 
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
-			log.Printf("ValidationError error: %v \n", vErr.Errors)
+			log.Printf("ValidationError error: %s \n", vErr)
 			errorResponse("Error parsing token!", w)
 			return
 		}
