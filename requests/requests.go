@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
-	"jotserver/data"
+	"github.com/ebuckley/jotserver/data"
 	"log"
 	"net/http"
 	"time"

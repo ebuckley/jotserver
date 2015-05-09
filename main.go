@@ -3,8 +3,8 @@ package main
 import (
 	"database/sql"
 	"flag"
-	"jotserver/data"
-	r "jotserver/requests"
+	"github.com/ebuckley/jotserver/data"
+	r "github.com/ebuckley/jotserver/requests"
 	"log"
 	"net/http"
 	"os"
