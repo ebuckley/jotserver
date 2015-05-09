@@ -105,7 +105,7 @@ func AuthHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		log.Printf("Authenticate Request: user[%s]", authorizationMsg.User, authorizationMsg.Password)
+		log.Printf("Authenticate Request: user[%s] %s", authorizationMsg.User, data.Password(authorizationMsg.Password).GetHash())
 
 		newUserID := data.IsValidLogin(db, authorizationMsg.User, data.Password(authorizationMsg.Password))
 		if newUserID == -1 {
